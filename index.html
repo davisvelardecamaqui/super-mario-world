@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#080b12">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Super Mario World</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      background: #080b12;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body,
+    #game {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      background: #080b12;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    #game {
+      position: absolute;
+      inset: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: #080b12;
+    }
+
+    /* Hidden until deliberately opened; inline display:block still works. */
+    #game .ejs_context_menu {
+      display: none;
+    }
+
+    #speed-toggle {
+      position: absolute;
+      top: max(12px, env(safe-area-inset-top));
+      left: max(12px, env(safe-area-inset-left));
+      z-index: 10;
+      min-width: 48px;
+      min-height: 44px;
+      border: 1px solid #ffffff55;
+      border-radius: 12px;
+      background: #111827cc;
+      color: #fff;
+      font: 700 15px/1 system-ui, sans-serif;
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+
+    #speed-toggle[aria-pressed="true"] {
+      background: #c9232d;
+      border-color: #ff8b91;
+    }
+
+    #speed-toggle:focus-visible {
+      outline: 2px solid white;
+      outline-offset: 3px;
+    }
+
+    /* En vertical, los accesos auxiliares quedan debajo de los controles
+       correspondientes sin mover la cruceta, A, B, Start ni Select. */
+    @media (orientation: portrait) {
+      #speed-toggle {
+        top: auto;
+        bottom: max(14px, env(safe-area-inset-bottom));
+        left: max(14px, env(safe-area-inset-left));
+      }
+
+      #game .ejs_virtualGamepad_open {
+        top: auto !important;
+        right: max(14px, env(safe-area-inset-right)) !important;
+        bottom: max(14px, env(safe-area-inset-bottom));
+        width: 44px;
+        height: 44px;
+        padding: 8px;
+        opacity: 0.72 !important;
+      }
+    }
+
+    noscript {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+      color: #fff;
+      font: 600 1rem/1.5 system-ui, sans-serif;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <main id="game" aria-label="Emulador de Super Mario World"></main>
+  <noscript>Activa JavaScript para iniciar el emulador.</noscript>
+
+  <script>
+    "use strict";
+
+    // EmulatorJS: Super Nintendo, ROM alojada en la raíz del repositorio.
+    window.EJS_player = "#game";
+    window.EJS_core = "snes";
+    window.EJS_controlScheme = "snes";
+    window.EJS_gameName = "Super Mario World";
+    window.EJS_gameID = 1990;
+    window.EJS_gameUrl = "./Super-Mario-World.sfc";
+    // Pin the version whose settings API is used by the speed toggle below.
+    window.EJS_pathtodata = "https://cdn.emulatorjs.org/4.2.3/data/";
+
+    window.EJS_language = "es-ES";
+    window.EJS_disableAutoLang = true;
+    // EJS_ready inicia el juego después de preparar el desbloqueo de audio.
+    // Esto evita la carrera que podía mostrar una pantalla que esperaba toque.
+    window.EJS_startOnLoaded = false;
+    window.EJS_backgroundColor = "#080b12";
+    window.EJS_color = "#e52521";
+    window.EJS_volume = 0.7;
+
+    // Fuerza el guardado SRAM al almacenamiento persistente del navegador.
+    window.EJS_fixedSaveInterval = 10000;
+    window.EJS_defaultOptions = {
+      "save-state-location": "browser",
+      "save-state-slot": 1,
+      "virtual-gamepad": "enabled",
+      "fastForward": "disabled",
+      "ff-ratio": "2.0"
+    };
+
+    // Conserva en la barra las acciones esenciales para móvil.
+    window.EJS_Buttons = {
+      playPause: true,
+      restart: true,
+      mute: true,
+      settings: true,
+      fullscreen: true,
+      saveState: true,
+      loadState: true,
+      quickSave: true,
+      quickLoad: true,
+      saveSavFiles: true,
+      loadSavFiles: true,
+      screenRecord: false,
+      screenshot: false,
+      cheat: false,
+      cacheManager: false,
+      exitEmulation: false
+    };
+
+    // Distribución táctil SNES; la velocidad usa un botón independiente.
+    window.EJS_VirtualGamepadSettings = [
+      { type: "button", text: "Y", id: "y", location: "right", left: 5, top: 68, bold: true, input_value: 1 },
+      { type: "button", text: "B", id: "b", location: "right", left: 58, top: 98, bold: true, input_value: 0 },
+      { type: "button", text: "A", id: "a", location: "right", left: 111, top: 68, bold: true, input_value: 8 },
+      { type: "button", text: "X", id: "x", location: "right", left: 58, top: 38, bold: true, input_value: 9 },
+      { type: "dpad", id: "dpad", location: "left", left: "50%", top: "50%", joystickInput: false, inputValues: [4, 5, 6, 7] },
+      { type: "button", text: "START", id: "start", location: "center", left: 60, fontSize: 13, block: true, input_value: 3 },
+      { type: "button", text: "SELECT", id: "select", location: "center", left: -8, fontSize: 13, block: true, input_value: 2 },
+      { type: "button", text: "L", id: "l", location: "left", left: 3, top: -90, bold: true, block: true, input_value: 10 },
+      { type: "button", text: "R", id: "r", location: "right", right: 3, top: -90, bold: true, block: true, input_value: 11 }
+    ];
+
+    function closeStartupMenus() {
+      const emulator = window.EJS_emulator;
+      emulator.elements.contextmenu.style.display = "none";
+      emulator.menu.close();
+    }
+
+    window.EJS_ready = function () {
+      const emulator = window.EJS_emulator;
+      closeStartupMenus();
+      // Autostart bypasses the touch on the native Start button.
+      emulator.touch = emulator.hasTouchScreen;
+      emulator.toggleVirtualGamepad(true);
+      // Safari blocks audio before a gesture. Resume it on a normal control
+      // touch instead of displaying EmulatorJS's blocking "resume" popup.
+      const resumeAudio = () => {
+        const context = emulator.Module?.AL?.currentCtx?.audioCtx;
+        if (context && context.state === "suspended") {
+          context.resume().catch(() => {});
+        }
+      };
+      emulator.checkStarted = resumeAudio;
+      for (const event of ["pointerdown", "touchstart", "keydown"]) {
+        document.addEventListener(event, resumeAudio, { capture: true, passive: true });
+      }
+
+      // Arranque visual inmediato. El navegador puede mantener el audio en
+      // silencio hasta el primer toque, pero el juego ya queda ejecutándose.
+      const startButton = emulator.elements.parent.querySelector(".ejs_start_button");
+      if (startButton && !emulator.started) {
+        emulator.startButtonClicked(startButton);
+      }
+    };
+    window.EJS_onGameStart = function () {
+      const emulator = window.EJS_emulator;
+      closeStartupMenus();
+      // Always show touch controls, including with older saved preferences.
+      emulator.changeSettingOption("virtual-gamepad", "enabled");
+      // Allow an already queued resize measurement to finish (4.2.3 hides
+      // previously hidden controls after 250 ms), then restore their state.
+      setTimeout(() => {
+        emulator.toggleVirtualGamepad(true);
+        emulator.handleResize();
+      }, 300);
+      // Start each visit at normal speed without clearing any saved game data.
+      emulator.changeSettingOption("fastForward", "disabled");
+      emulator.changeSettingOption("ff-ratio", "2.0");
+
+      if (document.getElementById("speed-toggle")) return;
+      const speed = document.createElement("button");
+      speed.id = "speed-toggle";
+      speed.type = "button";
+      speed.textContent = "2×";
+      speed.setAttribute("aria-label", "Velocidad rápida 2×");
+      speed.setAttribute("aria-pressed", "false");
+      // One click per tap, with no hold/release input sent to the GBA core.
+      for (const event of ["pointerdown", "pointerup", "touchstart", "touchend", "mousedown", "mouseup"]) {
+        speed.addEventListener(event, (e) => e.stopPropagation());
+      }
+      speed.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const enabled = !emulator.isFastForward;
+        emulator.changeSettingOption("ff-ratio", "2.0");
+        emulator.changeSettingOption("fastForward", enabled ? "enabled" : "disabled");
+        speed.setAttribute("aria-pressed", String(enabled));
+        speed.textContent = enabled ? "2× ON" : "2×";
+      });
+      // Keep the toggle inside the fullscreen element as well.
+      emulator.elements.parent.appendChild(speed);
+    };
+  </script>
+  <script src="https://cdn.emulatorjs.org/4.2.3/data/loader.js"></script>
+</body>
+</html>
